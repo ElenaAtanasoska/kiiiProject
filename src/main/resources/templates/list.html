@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head>
+    <title>Students List</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container mt-5">
+    <form id="filter-form" class="form-inline mb-3">
+        <div class="form-group mr-3">
+            <label for="f1" class="mr-2">Years Of Studying</label>
+            <input id="f1" type="number" name="yearsOfStudying" class="form-control"/>
+        </div>
+        <div class="form-group mr-3">
+            <label for="f2" class="mr-2">Course</label>
+            <select id="f2" name="courseId" class="form-control">
+                <option value="">All</option>
+                <option th:each="course : ${courses}" th:value="${course.getId()}" th:text="${course.getCourseName()}"></option>
+            </select>
+        </div>
+        <button id="filter" type="submit" class="btn btn-primary">Filter</button>
+    </form>
+    <div class="mb-3">
+        <a th:href="@{'/students/add'}" class="btn btn-success add-item" sec:authorize="hasRole('ROLE_ADMIN')">
+            Add
+        </a>
+    </div>
+    <table class="table table-striped">
+        <thead class="thead-dark">
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Years Of Studying</th>
+            <th>Type</th>
+            <th>Courses</th>
+            <th sec:authorize="hasRole('ROLE_ADMIN')">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="item" th:each="student : ${students}">
+            <td th:text="${student.getFullName()}"></td>
+            <td th:text="${student.getEmail()}"></td>
+            <td th:text="${student.yearsOfStudying}"></td>
+            <td th:text="${student.getType()}"></td>
+            <td>
+                <span class="badge badge-info item-rel" th:each="course : ${student.getCourses()}" th:text="${course.getCourseName()}"></span>
+            </td>
+            <td sec:authorize="hasRole('ROLE_ADMIN')">
+                <form method="POST" th:action="@{'/students/{id}/delete' (id=${student.getId()})}" sec:authorize="hasRole('ROLE_ADMIN')" class="d-inline">
+                    <button type="submit" class="btn btn-danger btn-sm delete-item">Delete</button>
+                </form>
+                <a class="btn btn-warning btn-sm edit-item" th:href="@{'/students/{id}/edit' (id=${student.getId()})}" sec:authorize="hasRole('ROLE_ADMIN')">Edit</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<div class="container mt-5">
+    <ul id="nav" class="nav nav-pills">
+        <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="/login" sec:authorize="isAnonymous()">Login</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logout" sec:authorize="isAuthenticated()">Logout</a></li>
+    </ul>
+</div>
+</body>
+</html>
