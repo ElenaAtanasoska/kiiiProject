@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    container_name: students
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: elena
+      POSTGRES_DB: studentsDB
+    ports:
+      - "5432:5432"
+    volumes:
+      - student-postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+      - ./custom-entrypoint.sh:/usr/local/bin/custom-entrypoint.sh
+    entrypoint: ["bash", "/usr/local/bin/custom-entrypoint.sh"]
+    networks:
+      - students-network
+
+  spring-boot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/studentsDB
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: elena
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - students-network
+
+networks:
+  students-network:
+    driver: bridge
+
+volumes:
+  student-postgres-data:
