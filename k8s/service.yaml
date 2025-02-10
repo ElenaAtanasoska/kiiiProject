@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-app-service
+  namespace: kiii
+spec:
+  selector:
+    app: studentapp
+  ports:
+    - protocol: TCP
+      port: 8080            # Exposes port 80 externally
+      targetPort: 8080     # Forwards traffic to port 8080 in the pods

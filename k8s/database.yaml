@@ -1,0 +1,179 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiii-postgres-conf
+  namespace: kiii
+data:
+  POSTGRES_URL: jdbc:postgresql://kiii-postgres-service:5432/studentsDB
+  POSTGRES_DB: studentsDB
+  POSTGRES_USER: postgres
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kiii-postgres-secret
+  namespace: kiii
+type: Opaque
+data:
+  POSTGRES_PASSWORD: ZWxlbmE=
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kiii-postgres-pv
+  namespace: kiii
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  hostPath:
+    path: "/mnt/data/kiii-postgres"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: kiii-postgres-pvc
+  namespace: kiii
+  labels:
+    app: postgres
+spec:
+  storageClassName: local-path
+  #  capacity:
+  accessModes:
+    - ReadWriteOnce
+  #    mozhe ova da e greshka ponatamu ako sakam da edit
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kiii-postgres-service
+  namespace: kiii
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kiii-postgres
+  namespace: kiii
+spec:
+  serviceName: kiii-postgres-service
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+        namespace: kiii
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          envFrom:
+            - configMapRef:
+                name: kiii-postgres-conf
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: kiii-postgres-conf
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: kiii-postgres-conf
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kiii-postgres-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+              name: postgres-port
+          volumeMounts:
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+            - name: kiii-postgres-pv
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: kiii-postgres-pv
+          persistentVolumeClaim:
+            claimName: kiii-postgres-pvc
+        - name: initdb
+          configMap:
+            name: postgres-initdb-config
+            items:
+              - key: init.sql
+                path: init.sql
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb-config
+  namespace: kiii
+data:
+  init.sql: |
+    -- Place your adapted init.sql content here
+    -- Ensure proper indentation as YAML is sensitive to it
+    -- Drop tables if they already exist
+  
+    -- Create the Course table
+    CREATE TABLE IF NOT EXISTS course
+    (
+        id SERIAL PRIMARY KEY,
+        course_name VARCHAR(100) NOT NULL  -- Add UNIQUE constraint to avoid duplicates
+    );
+    
+    -- Insert initial data into the Course table
+    INSERT INTO course (course_name)
+    VALUES ('KIII'),
+           ('WBS'),
+           ('VIS');
+    
+    -- Create the Student table
+    CREATE TABLE IF NOT EXISTS student
+    (
+        id          SERIAL PRIMARY KEY,
+        full_name   VARCHAR(100) NOT NULL,
+        email       VARCHAR(100) NOT NULL, -- Add UNIQUE constraint for email
+        password    VARCHAR(100) NOT NULL,
+        type        VARCHAR(20) NOT NULL,
+        start_date  DATE NOT NULL
+    );
+    
+    -- Insert initial data into the Student table
+    INSERT INTO student (email, start_date, full_name, password, type)
+    VALUES ('student1@gmail.com', '2021-06-25', 'Student1', 'student123#', 'ROLE_ADMIN'),
+           ('elena@gmail.com', '2021-06-25', 'Elena Atanasoska', 'elena123#', 'ROLE_REGULAR');
+       
+    
+    -- Create the Student-Course join table
+    CREATE TABLE IF NOT EXISTS student_courses
+    (
+        student_id INT NOT NULL,
+        courses_id INT NOT NULL,
+        FOREIGN KEY (student_id) REFERENCES student (id),
+        FOREIGN KEY (courses_id) REFERENCES course (id)
+    );
+    
+    -- Insert initial data into the Student-Course join table
+    INSERT INTO student_courses (student_id, courses_id)
+    VALUES (1, 1),
+           (2, 2); -- Prevent duplicate entries
