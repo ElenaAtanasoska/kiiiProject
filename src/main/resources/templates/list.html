@@ -19,7 +19,7 @@
             <label for="f2" class="mr-2">Course</label>
             <select id="f2" name="courseId" class="form-control">
                 <option value="">All</option>
-                <option th:each="course, iterStat : ${#numbers.sequence(0, 2)}" th:value="${courses[iterStat.index].id}" th:text="${courses[iterStat.index].courseName}"></option>
+                <option th:each="course : ${courses}" th:value="${course.getId()}" th:text="${course.getCourseName()}"></option>
             </select>
         </div>
         <button id="filter" type="submit" class="btn btn-primary">Filter</button>
